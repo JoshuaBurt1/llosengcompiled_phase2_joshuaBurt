@@ -68,7 +68,7 @@ public class EchoServer extends AbstractServer
         //System.out.println("Current connections: " + Arrays.toString(joinedConnections));
     }
 
-    synchronized protected void clientException(ConnectionToClient client, Throwable exception) {
+    public void disconnectedString() {
         // compares currentConnections array to joinedConnections array, difference is the disconnected client
         String[] currentConnections = new String[]{Arrays.toString(getClientConnections())};
         //System.out.println("Previous connections: " + Arrays.toString(joinedConnections));
@@ -81,6 +81,14 @@ public class EchoServer extends AbstractServer
         }
     }
 
+    synchronized protected void clientDisconnected(ConnectionToClient client) {
+        disconnectedString();
+    }
+
+    synchronized protected void clientException(ConnectionToClient client, Throwable exception) {
+        disconnectedString();
+    }
+
   /**
    * This method handles any messages received from the client.
    *
@@ -89,12 +97,12 @@ public class EchoServer extends AbstractServer
    */
   public void handleMessageFromClient(Object msg, ConnectionToClient client)
   {
-      /*
+
       String check = msg.toString();
       if(check.startsWith("SERVER msg> #")) { // to prevent client spoofing as server
           System.out.println("Illegal phrase from client: " + client);
           return;
-      }*/
+      }
       System.out.println("Message received: " + msg + " from " + client);
       this.sendToAllClients(msg); // this sends the message back to the client (echo from the server); AbstractServer.java
   }
@@ -114,7 +122,7 @@ public class EchoServer extends AbstractServer
    */
   protected void serverStopped()
   {
-    System.out.println("Server has stopped listening for connections.");
+      System.out.println("Server has stopped listening for connections.");
   }
 
     /**

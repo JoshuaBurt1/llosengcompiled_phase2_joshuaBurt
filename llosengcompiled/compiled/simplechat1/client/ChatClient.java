@@ -122,7 +122,7 @@ public class ChatClient extends AbstractClient
             closeConnection();
         }
         catch(IOException e) {}
-        System.exit(0);
+        //System.exit(0);
     }
 }
 //End of ChatClient class
