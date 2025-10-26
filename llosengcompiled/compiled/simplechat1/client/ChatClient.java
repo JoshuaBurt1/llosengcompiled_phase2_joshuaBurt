@@ -40,19 +40,19 @@ public class ChatClient extends AbstractClient
     /**
      * Constructs an instance of the chat client.
      *
-     * @param host The server to connect to.
-     * @param port The port number to connect on.
+     * @param loginId         //PROBABLY USE THIS FOR LOGIN_IN
+     * @param host     The server to connect to.
+     * @param port     The port number to connect on.
      * @param clientUI The interface type variable.
      */
 
-    public ChatClient(String host, int port, ChatIF clientUI)
+    public ChatClient(String loginId, String host, int port, ChatIF clientUI)
             throws IOException
     {
-        super(host, port); //Call the superclass constructor
+        super(loginId, host, port); //Call the superclass constructor
         this.clientUI = clientUI;
-        //openConnection(); //if commented, client needs to log in. If not client logs in automatically
+        //openConnection(); //if commented, client needs to log in. If not client logs in automatically //TEST CASE FOR #5. Phase 2
     }
-
 
     //Instance methods ************************************************
 

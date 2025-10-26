@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 
 import common.ChatIF;
@@ -27,30 +28,32 @@ public class EchoServer extends AbstractServer
     /**
      * Needed to determine #logoff clients
      */
+    String loginId = "loginId";
+    String joinedLoginId = "";
     private String[] joinedConnections = new String[0];
 
     //Class variables *************************************************
 
-  /**
-   * The default port to listen on.
-   */
-  final public static int DEFAULT_PORT = 5555;
+    /**
+     * The default port to listen on.
+     */
+    final public static int DEFAULT_PORT = 5555;
 
 
-  //Constructors ****************************************************
+    //Constructors ****************************************************
 
-  /**
-   * Constructs an instance of the echo server.
-   *
-   * @param port The port number to connect on.
-   */
-  public EchoServer(int port)
-  {
-    super(port);
-  }
+    /**
+     * Constructs an instance of the echo server.
+     *
+     * @param port The port number to connect on.
+     */
+    public EchoServer(int port)
+    {
+        super(port);
+    }
 
 
-  //Instance methods ************************************************
+    //Instance methods ************************************************
 
     /**
      * 1. Currently, the server ignores situations where clients connect or disconnect. Modify the server so that it prints out a nice message
@@ -89,48 +92,84 @@ public class EchoServer extends AbstractServer
         disconnectedString();
     }
 
-  /**
-   * This method handles any messages received from the client.
-   *
-   * @param msg The message received from the client.
-   * @param client The connection from which the message originated.
-   */
-  public void handleMessageFromClient(Object msg, ConnectionToClient client)
-  {
-
-      String check = msg.toString();
-      if(check.startsWith("SERVER msg> #")) { // to prevent client spoofing as server
-          System.out.println("Illegal phrase from client: " + client);
-          return;
-      }
-      System.out.println("Message received: " + msg + " from " + client);
-      this.sendToAllClients(msg); // this sends the message back to the client (echo from the server); AbstractServer.java
-  }
-
-  /**
-   * This method overrides the one in the superclass.  Called
-   * when the server starts listening for connections.
-   */
-  protected void serverStarted()
-  {
-    System.out.println("Server listening for connections on port " + getPort());
-  }
-
-  /**
-   * This method overrides the one in the superclass.  Called
-   * when the server stops listening for connections.
-   */
-  protected void serverStopped()
-  {
-      System.out.println("Server has stopped listening for connections.");
-  }
+    /**
+     * This method handles any messages received from the client.
+     *
+     * @param msg The message received from the client.
+     * @param client The connection from which the message originated.
+     */
+    public void handleMessageFromClient(Object msg, ConnectionToClient client)
+    {
+        String check = msg.toString();
+        // 1. The #login commend should be recognized by the server.
+        if(check.startsWith("#login ")) {
+            joinedLoginId = check.substring(7).trim();
+            if(joinedLoginId.isBlank()){
+                try {
+                    client.sendToClient("SERVER msg> Invalid login id.");
+                    client.close();
+                }
+                catch (Exception ex){
+                    System.out.println(ex);
+                }
+            }
+            // 4. The #login command should only be allowed as the first command received after a client connect.
+            // If #login is received at any other time, the server should send an error message back to the client.
+            try{
+                client.getInfo(loginId); // if the loginId exists -> already logged in
+                if(client.getInfo(loginId)==null){
+                    //2. The login id should be saved, so that the server can always identify the client.
+                    client.setInfo(loginId,joinedLoginId);
+                    return;
+                }
+                else{
+                    client.sendToClient("SERVER msg> Already logged in.");
+                }
+            }
+            catch (Exception ex){
+                System.out.println(ex);
+            }
+            return;
+        }
+        // 5. If the #login command is not received as the first command, then the server should send an error message back to the client
+        // and terminate the client’s connection. (use the method close in ConnectionToClient).
+        if(client.getInfo(loginId)==null) { // the only way the client loginId is not null is if #login command is used.
+            try {
+                client.sendToClient("SERVER msg> Error user, must log in first.");
+                client.close();
+            }
+            catch (Exception ex){
+                return;
+            }
+        }
+        if(client.getInfo(loginId)!=null) {
+            if (check.startsWith("SERVER msg> #")) { // to prevent client spoofing as server
+                System.out.println("Illegal phrase from client: " + client);
+                return;
+            }
+            //3. Each message echoed by the server should be prefixed by the login id of the client that sent the message.
+            System.out.println(client.getInfo(loginId) + ": " + msg);
+            this.sendToAllClients(msg); // this sends the message back to the client (echo from the server); AbstractServer.java
+        }
+    }
 
     /**
-     * 2. Currently, the server does not allow any user input. Study the way user input in obtained from the client, using the ClientConsole
-     * class, which implements the ChatIF interface. Create an analogous mechanism on the server side. (add a new class ServerConsole
-     * that also implements the ChatIF interface. Anything typed on the server’s console should be echoed to the server’s console and to all
-     * the clients. The message is prefixed by the string SERVER msg>).
+     * This method overrides the one in the superclass.  Called
+     * when the server starts listening for connections.
      */
+    protected void serverStarted()
+    {
+        System.out.println("Server listening for connections on port " + getPort());
+    }
+
+    /**
+     * This method overrides the one in the superclass.  Called
+     * when the server stops listening for connections.
+     */
+    protected void serverStopped()
+    {
+        System.out.println("Server has stopped listening for connections.");
+    }
 
     public static class ServerConsole implements ChatIF {
         private EchoServer server;
@@ -170,17 +209,6 @@ public class EchoServer extends AbstractServer
         public void display(String message) {
             System.out.println("SERVER msg> " + message); //this is what the server console returns from ChatClient.java (ChatIF implementation)
         }
-
-        /**
-         *In a similar manner to the way you implemented commands on the client side, add a mechanism so that the user of the server can type
-         * commands that perform special functions.
-         * 1. #quit cause the server to terminate gracefully.
-         * 2. #stop causes the server to stop listening for new clients.
-         * 3. #close causes the server not only to stop listening for new clients, but also to disconnect all existing clients.
-         * 4. #setport <port> calls the setPort method in the server. Only allowed if the server is closed.
-         * 5. #start causes the server starts to listening for new clients. Only valid if the server is stopped.
-         * 6. #getport displays the current port number.
-         */
 
         public void specialFunctions(String message) throws IOException {
             if(message.startsWith("SERVER msg> #setport ")){
@@ -226,38 +254,38 @@ public class EchoServer extends AbstractServer
 
 
     //Class methods ***************************************************
-  /**
-   * This method is responsible for the creation of
-   * the server instance (there is no UI in this phase).
-   *
-   * @param args[0] The port number to listen on.  Defaults to 5555
-   *          if no argument is entered.
-   */
-  public static void main(String[] args)
-  {
-    int port = 0; //Port to listen on
+    /**
+     * This method is responsible for the creation of
+     * the server instance (there is no UI in this phase).
+     *
+     * @param args[0] The port number to listen on.  Defaults to 5555
+     *          if no argument is entered.
+     */
+    public static void main(String[] args)
+    {
+        int port = 0; //Port to listen on
 
-    try
-    {
-      port = Integer.parseInt(args[0]); //Get port from command line
-    }
-    catch(Throwable t)
-    {
-      port = DEFAULT_PORT; //Set port to 5555
-    }
+        try
+        {
+            port = Integer.parseInt(args[0]); //Get port from command line
+        }
+        catch(Throwable t)
+        {
+            port = DEFAULT_PORT; //Set port to 5555
+        }
 
-    EchoServer sv = new EchoServer(port);
+        EchoServer sv = new EchoServer(port);
 
-    try
-    {
-      sv.listen(); //Start listening for connections
+        try
+        {
+            sv.listen(); //Start listening for connections
+        }
+        catch (Exception ex)
+        {
+            System.out.println("ERROR - Could not listen for clients!");
+        }
+        ServerConsole consoleChat = new ServerConsole(sv);
+        consoleChat.accept();  //Wait for console data
     }
-    catch (Exception ex)
-    {
-      System.out.println("ERROR - Could not listen for clients!");
-    }
-      ServerConsole consoleChat = new ServerConsole(sv);
-      consoleChat.accept();  //Wait for console data
-  }
 }
 //End of EchoServer class

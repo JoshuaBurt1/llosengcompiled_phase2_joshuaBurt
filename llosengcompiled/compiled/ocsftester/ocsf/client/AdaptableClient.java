@@ -4,10 +4,6 @@
 
 package ocsf.client;
 
-import java.io.*;
-import java.net.*;
-import java.util.*;
-
 /**
 * The <code> AdaptableClient </code> is a class
 * that extends the <code> AbstractClient </code> in place of
@@ -37,7 +33,7 @@ class AdaptableClient extends AbstractClient
    */
   public AdaptableClient(String host, int port, ObservableClient client)
   {
-    super(host, port);
+    super(host, host, port);
     this.client = client;
   }
 

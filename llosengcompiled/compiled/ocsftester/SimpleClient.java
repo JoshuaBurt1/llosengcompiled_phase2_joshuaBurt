@@ -36,19 +36,19 @@ public class SimpleClient extends AbstractClient
 
   public SimpleClient(List liste)
   {
-    super("localhost",12345);
+    super("localhost", host, 12345);
     this.liste = liste;
   }
 
   public SimpleClient(int port, List liste)
   {
-    super("localhost",port);
+    super("localhost", host, port);
     this.liste = liste;
   }
 
   public SimpleClient(String host, int port, List liste)
   {
-    super(host,port);
+    super(host, host, port);
     this.liste = liste;
   }
 
